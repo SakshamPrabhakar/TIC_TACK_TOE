@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MicroArcade 150 - Tic-Tac-Toe</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff}
+.container{text-align:center;padding:25px;background:rgba(255,255,255,0.1);border-radius:20px;box-shadow:0 8px 32px rgba(0,0,0,0.3);backdrop-filter:blur(10px)}
+h1{font-size:2.5em;margin-bottom:15px;text-shadow:2px 2px 4px rgba(0,0,0,0.3)}
+.difficulty{display:flex;gap:10px;justify-content:center;margin:15px 0}
+.diffBtn{background:rgba(255,255,255,0.2);color:#fff;border:2px solid rgba(255,255,255,0.3);padding:8px 20px;border-radius:20px;cursor:pointer;transition:all 0.3s;font-weight:bold}
+.diffBtn:hover{background:rgba(255,255,255,0.3);transform:translateY(-2px)}
+.diffBtn.active{background:#fff;color:#667eea;border-color:#fff;box-shadow:0 4px 15px rgba(255,255,255,0.4)}
+.score{display:flex;gap:30px;justify-content:center;margin:15px 0;font-size:1.1em;font-weight:bold}
+.board{display:grid;grid-template-columns:repeat(3,100px);gap:5px;margin:20px auto;width:310px;background:#333;padding:5px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.5)}
+.cell{width:100px;height:100px;background:#fff;border:none;font-size:3em;cursor:pointer;transition:all 0.2s;color:#333;display:flex;align-items:center;justify-content:center;font-weight:bold}
+.cell:hover:not(:disabled){background:#e0e0e0;transform:scale(1.05);box-shadow:0 2px 10px rgba(0,0,0,0.2)}
+.cell:disabled{cursor:not-allowed;opacity:0.7}
+.status{font-size:1.3em;margin:20px 0;min-height:35px;font-weight:bold;text-shadow:2px 2px 4px rgba(0,0,0,0.3)}
+.reset{background:#ff6b6b;color:#fff;border:none;padding:12px 30px;font-size:1em;cursor:pointer;border-radius:25px;transition:all 0.3s;margin-top:10px;font-weight:bold}
+.reset:hover{background:#ee5a5a;transform:translateY(-2px);box-shadow:0 4px 15px rgba(255,107,107,0.4)}
+.winner{color:#ffd700;text-shadow:0 0 15px rgba(255,215,0,0.9);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🎮 Tic-Tac-Toe</h1>
+<div class="difficulty">
+<button class="diffBtn" id="easy" onclick="setDifficulty('easy')">Easy</button>
+<button class="diffBtn active" id="medium" onclick="setDifficulty('medium')">Medium</button>
+<button class="diffBtn" id="hard" onclick="setDifficulty('hard')">Hard</button>
+</div>
+<div class="score">
+<span>👤 You: <span id="scoreX">0</span></span>
+<span>🤖 AI: <span id="scoreO">0</span></span>
+</div>
+<div class="status" id="status">Your turn (X)</div>
+<div class="board" id="board"></div>
+<button class="reset" onclick="initGame()">🔄 Reset Game</button>
+</div>
+<script>
+let board=[...Array(9)].fill(''),currentPlayer='X',gameActive=true,difficulty='medium',scores={X:0,O:0};
+const boardEl=document.getElementById('board'),statusEl=document.getElementById('status');
+function setDifficulty(level){
+difficulty=level;['easy','medium','hard'].forEach(d=>document.getElementById(d).classList.toggle('active',d===level));localStorage.removeItem('ticTacToe');initGame();
+}
+function initGame(){
+board=[...Array(9)].fill('');currentPlayer='X';gameActive=true;
+boardEl.innerHTML='';statusEl.textContent='Your turn (X)';statusEl.className='status';
+for(let i=0;i<9;i++){
+const cell=document.createElement('button');cell.className='cell';cell.id=i;
+cell.onclick=()=>makeMove(i);boardEl.appendChild(cell);
+}
+const saved=localStorage.getItem('ticTacToe');
+if(saved){try{const data=JSON.parse(saved);board=data.b;currentPlayer=data.p;gameActive=data.a;difficulty=data.d||'medium';['easy','medium','hard'].forEach(d=>document.getElementById(d).classList.toggle('active',d===difficulty));updateDisplay();}catch(e){}}
+updateScoreDisplay();
+}
+function makeMove(index){
+if(!gameActive||board[index]||currentPlayer!=='X')return;
+board[index]='X';updateCell(index,'X');
+if(checkWinner('X')){scores.X++;endGame('X');return}
+if(board.every(c=>c)){endGame(null);return}
+currentPlayer='O';statusEl.textContent='AI thinking...';
+setTimeout(()=>{aiMove();if(gameActive){currentPlayer='X';statusEl.textContent='Your turn (X)'}},300);
+}
+function aiMove(){
+const move=difficulty==='easy'?findEasyMove():difficulty==='hard'?findBestMove():Math.random()<0.7?findBestMove():findEasyMove();
+if(move===-1)return;
+board[move]='O';updateCell(move,'O');
+if(checkWinner('O')){scores.O++;endGame('O');return}
+if(board.every(c=>c)){endGame(null);return}
+}
+function findEasyMove(){
+const empty=[];for(let i=0;i<9;i++)if(!board[i])empty.push(i);return empty.length?empty[Math.floor(Math.random()*empty.length)]:-1;
+}
+function findBestMove(){
+for(let i=0;i<9;i++)if(!board[i]){board[i]='O';if(checkWinner('O')){board[i]='';return i}board[i]='';}
+for(let i=0;i<9;i++)if(!board[i]){board[i]='X';if(checkWinner('X')){board[i]='O';return i}board[i]='';}
+if(!board[4])return 4;const corners=[0,2,6,8];for(let c of corners)if(!board[c])return c;
+for(let i=0;i<9;i++)if(!board[i])return i;return-1;
+}
+function checkWinner(player=currentPlayer){
+const wins=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+return wins.some(win=>win.every(i=>board[i]===player));
+}
+function updateCell(index,symbol){
+const cell=document.getElementById(index);cell.textContent=symbol;cell.disabled=true;
+localStorage.setItem('ticTacToe',JSON.stringify({b:board,p:currentPlayer,a:gameActive,d:difficulty}));
+}
+function updateDisplay(){
+board.forEach((cell,i)=>{const el=document.getElementById(i);if(el){el.textContent=cell||'';el.disabled=!!cell}});
+}
+function updateScoreDisplay(){
+const saved=localStorage.getItem('scores');if(saved){try{scores=JSON.parse(saved);}catch(e){}}
+document.getElementById('scoreX').textContent=scores.X;
+document.getElementById('scoreO').textContent=scores.O;
+}
+function endGame(winner){
+gameActive=false;boardEl.querySelectorAll('.cell').forEach(c=>c.disabled=true);
+if(winner==='X')statusEl.textContent='🎉 You Win!';else if(winner==='O')statusEl.textContent='😔 AI Wins!';else statusEl.textContent='🤝 Draw!';
+statusEl.className='status winner';localStorage.setItem('scores',JSON.stringify(scores));localStorage.removeItem('ticTacToe');updateScoreDisplay();
+}
+updateScoreDisplay();initGame();
+</script>
+</body>
+</html>
+
